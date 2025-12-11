@@ -17,23 +17,23 @@ class WhisperService extends EventEmitter {
     constructor() {
         super();
         this.serviceName = 'WhisperService';
-        
+
         // 경로 및 디렉토리
         this.whisperPath = null;
         this.modelsDir = null;
         this.tempDir = null;
-        
+
         // 세션 관리 (세션 풀 내장)
         this.sessionPool = [];
         this.activeSessions = new Map();
         this.maxSessions = 3;
-        
+
         // 설치 상태
         this.installState = {
             isInstalled: false,
             isInitialized: false
         };
-        
+
         // 사용 가능한 모델
         this.availableModels = {
             'whisper-tiny': {
@@ -88,7 +88,7 @@ class WhisperService extends EventEmitter {
     }
 
     async downloadFile(url, destination, options = {}) {
-        const { 
+        const {
             onProgress = null,
             headers = { 'User-Agent': 'Glass-App' },
             timeout = 300000,
@@ -103,13 +103,13 @@ class WhisperService extends EventEmitter {
             const request = https.get(url, { headers }, (response) => {
                 if ([301, 302, 307, 308].includes(response.statusCode)) {
                     file.close();
-                    fs.unlink(destination, () => {});
-                    
+                    fs.unlink(destination, () => { });
+
                     if (!response.headers.location) {
                         reject(new Error('Redirect without location header'));
                         return;
                     }
-                    
+
                     console.log(`[${this.serviceName}] Following redirect from ${url} to ${response.headers.location}`);
                     this.downloadFile(response.headers.location, destination, options)
                         .then(resolve)
@@ -119,7 +119,7 @@ class WhisperService extends EventEmitter {
 
                 if (response.statusCode !== 200) {
                     file.close();
-                    fs.unlink(destination, () => {});
+                    fs.unlink(destination, () => { });
                     reject(new Error(`Download failed: ${response.statusCode} ${response.statusMessage}`));
                     return;
                 }
@@ -128,10 +128,10 @@ class WhisperService extends EventEmitter {
 
                 response.on('data', (chunk) => {
                     downloadedSize += chunk.length;
-                    
+
                     if (totalSize > 0) {
                         const progress = Math.round((downloadedSize / totalSize) * 100);
-                        
+
                         if (onProgress) {
                             onProgress(progress, downloadedSize, totalSize);
                         }
@@ -150,13 +150,13 @@ class WhisperService extends EventEmitter {
             request.on('timeout', () => {
                 request.destroy();
                 file.close();
-                fs.unlink(destination, () => {});
+                fs.unlink(destination, () => { });
                 reject(new Error('Download timeout'));
             });
 
             request.on('error', (err) => {
                 file.close();
-                fs.unlink(destination, () => {});
+                fs.unlink(destination, () => { });
                 this.emit('download-error', { url, error: err, modelId });
                 reject(err);
             });
@@ -164,28 +164,28 @@ class WhisperService extends EventEmitter {
             request.setTimeout(timeout);
 
             file.on('error', (err) => {
-                fs.unlink(destination, () => {});
+                fs.unlink(destination, () => { });
                 reject(err);
             });
         });
     }
 
     async downloadWithRetry(url, destination, options = {}) {
-        const { 
-            maxRetries = 3, 
-            retryDelay = 1000, 
+        const {
+            maxRetries = 3,
+            retryDelay = 1000,
             expectedChecksum = null,
             modelId = null,
-            ...downloadOptions 
+            ...downloadOptions
         } = options;
-        
+
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                const result = await this.downloadFile(url, destination, { 
-                    ...downloadOptions, 
-                    modelId 
+                const result = await this.downloadFile(url, destination, {
+                    ...downloadOptions,
+                    modelId
                 });
-                
+
                 if (expectedChecksum) {
                     const isValid = await this.verifyChecksum(destination, expectedChecksum);
                     if (!isValid) {
@@ -194,13 +194,13 @@ class WhisperService extends EventEmitter {
                     }
                     console.log(`[${this.serviceName}] Checksum verified successfully`);
                 }
-                
+
                 return result;
             } catch (error) {
                 if (attempt === maxRetries) {
                     throw error;
                 }
-                
+
                 console.log(`Download attempt ${attempt} failed, retrying in ${retryDelay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
             }
@@ -211,7 +211,7 @@ class WhisperService extends EventEmitter {
         return new Promise((resolve, reject) => {
             const hash = crypto.createHash('sha256');
             const stream = fs.createReadStream(filePath);
-            
+
             stream.on('data', (data) => hash.update(data));
             stream.on('end', () => {
                 const fileChecksum = hash.digest('hex');
@@ -226,9 +226,9 @@ class WhisperService extends EventEmitter {
     async autoInstall(onProgress) {
         const platform = this.getPlatform();
         console.log(`[${this.serviceName}] Starting auto-installation for ${platform}`);
-        
+
         try {
-            switch(platform) {
+            switch (platform) {
                 case 'darwin':
                     return await this.installMacOS(onProgress);
                 case 'win32':
@@ -246,7 +246,7 @@ class WhisperService extends EventEmitter {
 
     async shutdown(force = false) {
         console.log(`[${this.serviceName}] Starting ${force ? 'forced' : 'graceful'} shutdown...`);
-        
+
         const isRunning = await this.isServiceRunning();
         if (!isRunning) {
             console.log(`[${this.serviceName}] Service not running, nothing to shutdown`);
@@ -254,9 +254,9 @@ class WhisperService extends EventEmitter {
         }
 
         const platform = this.getPlatform();
-        
+
         try {
-            switch(platform) {
+            switch (platform) {
                 case 'darwin':
                     return await this.shutdownMacOS(force);
                 case 'win32':
@@ -279,10 +279,10 @@ class WhisperService extends EventEmitter {
         try {
             const homeDir = os.homedir();
             const whisperDir = path.join(homeDir, '.glass', 'whisper');
-            
+
             this.modelsDir = path.join(whisperDir, 'models');
             this.tempDir = path.join(whisperDir, 'temp');
-            
+
             // Windows에서는 .exe 확장자 필요
             const platform = this.getPlatform();
             const whisperExecutable = platform === 'win32' ? 'whisper-whisper.exe' : 'whisper';
@@ -290,7 +290,7 @@ class WhisperService extends EventEmitter {
 
             await this.ensureDirectories();
             await this.ensureWhisperBinary();
-            
+
             this.installState.isInitialized = true;
             console.log('[WhisperService] Initialized successfully');
         } catch (error) {
@@ -328,7 +328,7 @@ class WhisperService extends EventEmitter {
         const session = new WhisperSession(config, this);
         await session.initialize();
         this.activeSessions.set(session.id, session);
-        
+
         return session;
     }
 
@@ -337,7 +337,7 @@ class WhisperService extends EventEmitter {
         if (session) {
             await session.cleanup();
             session.inUse = false;
-            
+
             // add to session pool
             if (this.sessionPool.length < 2) {
                 this.sessionPool.push(session);
@@ -355,7 +355,7 @@ class WhisperService extends EventEmitter {
         for (const session of this.activeSessions.values()) {
             await session.destroy();
         }
-        
+
         this.activeSessions.clear();
         this.sessionPool = [];
     }
@@ -400,7 +400,7 @@ class WhisperService extends EventEmitter {
         }
 
         await this.autoInstall();
-        
+
         // verify installation
         const verified = await this.verifyInstallation();
         if (!verified.success) {
@@ -416,7 +416,7 @@ class WhisperService extends EventEmitter {
 
         console.log('[WhisperService] Installing whisper-cpp via Homebrew...');
         await spawnAsync('brew', ['install', 'whisper-cpp']);
-        
+
         const whisperCliPath = await this.checkCommand('whisper-cli');
         if (whisperCliPath) {
             this.whisperPath = whisperCliPath;
@@ -456,25 +456,25 @@ class WhisperService extends EventEmitter {
         const modelInfo = this.availableModels[modelId];
         const modelPath = await this.getModelPath(modelId);
         const checksumInfo = DOWNLOAD_CHECKSUMS.whisper.models[modelId];
-        
+
         // Emit progress event - LocalAIManager가 처리
-        this.emit('install-progress', { 
-            model: modelId, 
-            progress: 0 
+        this.emit('install-progress', {
+            model: modelId,
+            progress: 0
         });
-        
+
         await this.downloadWithRetry(modelInfo.url, modelPath, {
             expectedChecksum: checksumInfo?.sha256,
             modelId, // pass modelId to LocalAIServiceBase for event handling
             onProgress: (progress) => {
                 // Emit progress event - LocalAIManager가 처리
-                this.emit('install-progress', { 
-                    model: modelId, 
-                    progress 
+                this.emit('install-progress', {
+                    model: modelId,
+                    progress
                 });
             }
         });
-        
+
         console.log(`[WhisperService] Model ${modelId} downloaded successfully`);
         this.emit('model-download-complete', { modelId });
     }
@@ -488,7 +488,7 @@ class WhisperService extends EventEmitter {
             }
 
             await this.ensureModelAvailable(modelId);
-            
+
             return { success: true };
         } catch (error) {
             console.error(`[WhisperService] Failed to handle download for model ${modelId}:`, error);
@@ -525,10 +525,10 @@ class WhisperService extends EventEmitter {
         const random = Math.random().toString(36).substr(2, 6);
         const sessionPrefix = sessionId ? `${sessionId}_` : '';
         const tempFile = path.join(this.tempDir, `audio_${sessionPrefix}${timestamp}_${random}.wav`);
-        
+
         const wavHeader = this.createWavHeader(audioBuffer.length);
         const wavBuffer = Buffer.concat([wavHeader, audioBuffer]);
-        
+
         await fsPromises.writeFile(tempFile, wavBuffer);
         return tempFile;
     }
@@ -538,7 +538,7 @@ class WhisperService extends EventEmitter {
         const sampleRate = 16000;
         const numChannels = 1;
         const bitsPerSample = 16;
-        
+
         header.write('RIFF', 0);
         header.writeUInt32LE(36 + dataSize, 4);
         header.write('WAVE', 8);
@@ -552,7 +552,7 @@ class WhisperService extends EventEmitter {
         header.writeUInt16LE(bitsPerSample, 34);
         header.write('data', 36);
         header.writeUInt32LE(dataSize, 40);
-        
+
         return header;
     }
 
@@ -645,41 +645,41 @@ class WhisperService extends EventEmitter {
         const version = 'v1.7.6';
         const binaryUrl = `https://github.com/ggml-org/whisper.cpp/releases/download/${version}/whisper-bin-x64.zip`;
         const tempFile = path.join(this.tempDir, 'whisper-binary.zip');
-        
+
         try {
             console.log('[WhisperService] Step 1: Downloading Whisper binary...');
             await this.downloadWithRetry(binaryUrl, tempFile);
-            
+
             console.log('[WhisperService] Step 2: Extracting archive...');
             const extractDir = path.join(this.tempDir, 'extracted');
-            
+
             // 임시 압축 해제 디렉토리 생성
             await fsPromises.mkdir(extractDir, { recursive: true });
-            
+
             // PowerShell 명령에서 경로를 올바르게 인용
             const expandCommand = `Expand-Archive -Path "${tempFile}" -DestinationPath "${extractDir}" -Force`;
             await spawnAsync('powershell', ['-command', expandCommand]);
-            
+
             console.log('[WhisperService] Step 3: Finding and moving whisper executable...');
-            
+
             // 압축 해제된 디렉토리에서 whisper.exe 파일 찾기
             const whisperExecutables = await this.findWhisperExecutables(extractDir);
-            
+
             if (whisperExecutables.length === 0) {
                 throw new Error('whisper.exe not found in extracted files');
             }
-            
+
             // 첫 번째로 찾은 whisper.exe를 목표 위치로 복사
             const sourceExecutable = whisperExecutables[0];
             const targetDir = path.dirname(this.whisperPath);
             await fsPromises.mkdir(targetDir, { recursive: true });
             await fsPromises.copyFile(sourceExecutable, this.whisperPath);
-            
+
             console.log('[WhisperService] Step 4: Verifying installation...');
-            
+
             // 설치 검증
             await fsPromises.access(this.whisperPath, fs.constants.F_OK);
-            
+
             // whisper.exe 실행 테스트
             try {
                 await spawnAsync(this.whisperPath, ['--help']);
@@ -687,37 +687,37 @@ class WhisperService extends EventEmitter {
             } catch (testError) {
                 console.warn('[WhisperService] Whisper executable test failed, but file exists:', testError.message);
             }
-            
+
             console.log('[WhisperService] Step 5: Cleanup...');
-            
+
             // 임시 파일 정리
-            await fsPromises.unlink(tempFile).catch(() => {});
-            await this.removeDirectory(extractDir).catch(() => {});
-            
+            await fsPromises.unlink(tempFile).catch(() => { });
+            await this.removeDirectory(extractDir).catch(() => { });
+
             console.log('[WhisperService] Whisper installed successfully on Windows');
             return true;
-            
+
         } catch (error) {
             console.error('[WhisperService] Windows installation failed:', error);
-            
+
             // 실패 시 임시 파일 정리
-            await fsPromises.unlink(tempFile).catch(() => {});
-            await this.removeDirectory(path.join(this.tempDir, 'extracted')).catch(() => {});
-            
+            await fsPromises.unlink(tempFile).catch(() => { });
+            await this.removeDirectory(path.join(this.tempDir, 'extracted')).catch(() => { });
+
             throw new Error(`Failed to install Whisper on Windows: ${error.message}`);
         }
     }
-    
+
     // 압축 해제된 디렉토리에서 whisper.exe 파일들을 재귀적으로 찾기
     async findWhisperExecutables(dir) {
         const executables = [];
-        
+
         try {
             const items = await fsPromises.readdir(dir, { withFileTypes: true });
-            
+
             for (const item of items) {
                 const fullPath = path.join(dir, item.name);
-                
+
                 if (item.isDirectory()) {
                     const subExecutables = await this.findWhisperExecutables(fullPath);
                     executables.push(...subExecutables);
@@ -728,25 +728,25 @@ class WhisperService extends EventEmitter {
         } catch (error) {
             console.warn('[WhisperService] Error reading directory:', dir, error.message);
         }
-        
+
         return executables;
     }
-    
+
     // 디렉토리 재귀적 삭제
     async removeDirectory(dir) {
         try {
             const items = await fsPromises.readdir(dir, { withFileTypes: true });
-            
+
             for (const item of items) {
                 const fullPath = path.join(dir, item.name);
-                
+
                 if (item.isDirectory()) {
                     await this.removeDirectory(fullPath);
                 } else {
                     await fsPromises.unlink(fullPath);
                 }
             }
-            
+
             await fsPromises.rmdir(dir);
         } catch (error) {
             console.warn('[WhisperService] Error removing directory:', dir, error.message);
@@ -758,7 +758,7 @@ class WhisperService extends EventEmitter {
         const version = 'v1.7.6';
         const binaryUrl = `https://github.com/ggml-org/whisper.cpp/releases/download/${version}/whisper-cpp-${version}-linux-x64.tar.gz`;
         const tempFile = path.join(this.tempDir, 'whisper-binary.tar.gz');
-        
+
         try {
             await this.downloadWithRetry(binaryUrl, tempFile);
             const extractDir = path.dirname(this.whisperPath);
@@ -830,21 +830,21 @@ class WhisperSession {
 }
 
 // verify installation
-WhisperService.prototype.verifyInstallation = async function() {
+WhisperService.prototype.verifyInstallation = async function () {
     try {
         console.log('[WhisperService] Verifying installation...');
-        
+
         // 1. check binary
         if (!this.whisperPath) {
             return { success: false, error: 'Whisper binary path not set' };
         }
-        
+
         try {
             await fsPromises.access(this.whisperPath, fs.constants.X_OK);
         } catch (error) {
             return { success: false, error: 'Whisper binary not executable' };
         }
-        
+
         // 2. check version
         try {
             const { stdout } = await spawnAsync(this.whisperPath, ['--help']);
@@ -854,7 +854,7 @@ WhisperService.prototype.verifyInstallation = async function() {
         } catch (error) {
             return { success: false, error: 'Whisper binary not responding' };
         }
-        
+
         // 3. check directories
         try {
             await fsPromises.access(this.modelsDir, fs.constants.W_OK);
@@ -862,10 +862,10 @@ WhisperService.prototype.verifyInstallation = async function() {
         } catch (error) {
             return { success: false, error: 'Required directories not accessible' };
         }
-        
+
         console.log('[WhisperService] Installation verified successfully');
         return { success: true };
-        
+
     } catch (error) {
         console.error('[WhisperService] Verification failed:', error);
         return { success: false, error: error.message };
