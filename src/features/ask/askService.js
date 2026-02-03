@@ -234,7 +234,7 @@ class AskService {
      * @param {string} userPrompt
      * @returns {Promise<{success: boolean, response?: string, error?: string}>}
      */
-    async sendMessage(userPrompt, conversationHistoryRaw = []) {
+    async sendMessage(userPrompt, sendScreenshot = true, conversationHistoryRaw = []) {
         internalBridge.emit('window:requestVisibility', { name: 'ask', visible: true });
         this.state = {
             ...this.state,
@@ -256,7 +256,7 @@ class AskService {
         let sessionId;
 
         try {
-            console.log(`[AskService] 🤖 Processing message: ${userPrompt.substring(0, 50)}...`);
+            console.log(`[AskService] 🤖 Processing message: ${userPrompt.substring(0, 50)}... (screenshot: ${sendScreenshot})`);
 
             sessionId = await sessionRepository.getOrCreateActive('ask');
             await askRepository.addAiMessage({ sessionId, role: 'user', content: userPrompt.trim() });
@@ -268,8 +268,14 @@ class AskService {
             }
             console.log(`[AskService] Using model: ${modelInfo.model} for provider: ${modelInfo.provider}`);
 
-            const screenshotResult = await captureScreenshot({ quality: 'medium' });
-            const screenshotBase64 = screenshotResult.success ? screenshotResult.base64 : null;
+            // Only capture screenshot if sendScreenshot is true
+            let screenshotBase64 = null;
+            if (sendScreenshot) {
+                const screenshotResult = await captureScreenshot({ quality: 'medium' });
+                screenshotBase64 = screenshotResult.success ? screenshotResult.base64 : null;
+            } else {
+                console.log('[AskService] Screenshot capture skipped by user preference');
+            }
 
             // Get transcript from ListenService
             const transcript = this.getTranscript();
