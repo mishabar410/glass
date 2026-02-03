@@ -42,7 +42,7 @@ class ListenService {
     sendToRenderer(channel, data) {
         const { windowPool } = require('../../window/windowManager');
         const listenWindow = windowPool?.get('listen');
-        
+
         if (listenWindow && !listenWindow.isDestroyed()) {
             listenWindow.webContents.send(channel, data);
         }
@@ -68,7 +68,7 @@ class ListenService {
                         listenWindow.webContents.send('session-state-changed', { isActive: true });
                     }
                     break;
-        
+
                 case 'Stop':
                     console.log('[ListenService] changeSession to "Stop"');
                     await this.closeSession();
@@ -76,32 +76,32 @@ class ListenService {
                         listenWindow.webContents.send('session-state-changed', { isActive: false });
                     }
                     break;
-        
+
                 case 'Done':
                     console.log('[ListenService] changeSession to "Done"');
                     internalBridge.emit('window:requestVisibility', { name: 'listen', visible: false });
                     listenWindow.webContents.send('session-state-changed', { isActive: false });
                     break;
-        
+
                 default:
                     throw new Error(`[ListenService] unknown listenButtonText: ${listenButtonText}`);
             }
-            
+
             header.webContents.send('listen:changeSessionResult', { success: true });
 
         } catch (error) {
             console.error('[ListenService] error in handleListenRequest:', error);
             header.webContents.send('listen:changeSessionResult', { success: false });
-            throw error; 
+            throw error;
         }
     }
 
     async handleTranscriptionComplete(speaker, text) {
         console.log(`[ListenService] Transcription complete: ${speaker} - ${text}`);
-        
+
         // Save to database
         await this.saveConversationTurn(speaker, text);
-        
+
         // Add to summary service for analysis
         this.summaryService.addConversationTurn(speaker, text);
     }
@@ -135,13 +135,13 @@ class ListenService {
                 // This case should ideally not happen as authService initializes a default user.
                 throw new Error("Cannot initialize session: auth service not ready.");
             }
-            
+
             this.currentSessionId = await sessionRepository.getOrCreateActive('listen');
             console.log(`[DB] New listen session ensured: ${this.currentSessionId}`);
 
             // Set session ID for summary service
             this.summaryService.setSessionId(this.currentSessionId);
-            
+
             // Reset conversation history
             this.summaryService.resetConversationHistory();
 
@@ -194,9 +194,9 @@ class ListenService {
             /* ------------------------------------------- */
 
             console.log('✅ Listen service initialized successfully.');
-            
+
             this.sendToRenderer('update-status', 'Connected. Ready to listen.');
-            
+
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize listen service:', error);
@@ -263,6 +263,21 @@ class ListenService {
         };
     }
 
+    getDetailConversationHistory() {
+        const history = [...this.summaryService.getConversationHistory()];
+
+        // Append pending transcriptions if they exist
+        const pending = this.sttService.getPendingTranscript();
+        if (pending.me) {
+            history.push(`me: ${pending.me}`);
+        }
+        if (pending.them) {
+            history.push(`them: ${pending.them}`);
+        }
+
+        return history;
+    }
+
     getConversationHistory() {
         return this.summaryService.getConversationHistory();
     }
@@ -304,7 +319,7 @@ class ListenService {
         'macOS audio capture started.',
         'Error starting macOS audio capture:'
     );
-    
+
     handleStopMacosAudio = this._createHandler(
         this.stopMacOSAudioCapture,
         'macOS audio capture stopped.',

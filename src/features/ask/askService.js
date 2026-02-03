@@ -14,6 +14,7 @@ const getWindowPool = () => {
 
 const sessionRepository = require('../common/repositories/session');
 const askRepository = require('./repositories');
+const listenService = require('../listen/listenService');
 const { getSystemPrompt } = require('../common/prompts/promptBuilder');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -68,11 +69,11 @@ async function captureScreenshot(options = {}) {
                     console.warn('Sharp module failed, falling back to basic image processing:', sharpError.message);
                 }
             }
-            
+
             // Fallback: Return the original image without resizing
             console.log('[AskService] Using fallback image processing (no resize/compression)');
             const base64 = imageBuffer.toString('base64');
-            
+
             lastScreenshot = {
                 base64,
                 width: null, // We don't have metadata without sharp
@@ -175,27 +176,27 @@ class AskService {
         }
     }
 
-    async closeAskWindow () {
-            if (this.abortController) {
-                this.abortController.abort('Window closed by user');
-                this.abortController = null;
-            }
-    
-            this.state = {
-                isVisible      : false,
-                isLoading      : false,
-                isStreaming    : false,
-                currentQuestion: '',
-                currentResponse: '',
-                showTextInput  : true,
-            };
-            this._broadcastState();
-    
-            internalBridge.emit('window:requestVisibility', { name: 'ask', visible: false });
-    
-            return { success: true };
+    async closeAskWindow() {
+        if (this.abortController) {
+            this.abortController.abort('Window closed by user');
+            this.abortController = null;
         }
-    
+
+        this.state = {
+            isVisible: false,
+            isLoading: false,
+            isStreaming: false,
+            currentQuestion: '',
+            currentResponse: '',
+            showTextInput: true,
+        };
+        this._broadcastState();
+
+        internalBridge.emit('window:requestVisibility', { name: 'ask', visible: false });
+
+        return { success: true };
+    }
+
 
     /**
      * 
@@ -211,11 +212,29 @@ class AskService {
     }
 
     /**
+     * Get the current transcript from ListenService
+     * @returns {string} The formatted transcript
+     */
+    getTranscript() {
+        try {
+            const history = listenService.getDetailConversationHistory();
+            if (!history || history.length === 0) {
+                return '';
+            }
+            // Join conversation turns with newlines
+            return history.join('\n');
+        } catch (error) {
+            console.error('[AskService] Failed to get transcript:', error);
+            return '';
+        }
+    }
+
+    /**
      * 
      * @param {string} userPrompt
      * @returns {Promise<{success: boolean, response?: string, error?: string}>}
      */
-    async sendMessage(userPrompt, conversationHistoryRaw=[]) {
+    async sendMessage(userPrompt, conversationHistoryRaw = []) {
         internalBridge.emit('window:requestVisibility', { name: 'ask', visible: true });
         this.state = {
             ...this.state,
@@ -242,7 +261,7 @@ class AskService {
             sessionId = await sessionRepository.getOrCreateActive('ask');
             await askRepository.addAiMessage({ sessionId, role: 'user', content: userPrompt.trim() });
             console.log(`[AskService] DB: Saved user prompt to session ${sessionId}`);
-            
+
             const modelInfo = await modelStateService.getCurrentModelInfo('llm');
             if (!modelInfo || !modelInfo.apiKey) {
                 throw new Error('AI model or API key not configured.');
@@ -252,17 +271,31 @@ class AskService {
             const screenshotResult = await captureScreenshot({ quality: 'medium' });
             const screenshotBase64 = screenshotResult.success ? screenshotResult.base64 : null;
 
-            const conversationHistory = this._formatConversationForPrompt(conversationHistoryRaw);
+            // Get transcript from ListenService
+            const transcript = this.getTranscript();
+            console.log(`[AskService] Transcript available: ${transcript ? 'yes (' + transcript.length + ' chars)' : 'no'}`);
+            const conversationHistory = transcript || this._formatConversationForPrompt(conversationHistoryRaw);
 
             const systemPrompt = getSystemPrompt('pickle_glass_analysis', conversationHistory, false);
+
+            // Build user message content
+            const userContent = [];
+
+            // Add transcript context if available
+            if (transcript) {
+                userContent.push({
+                    type: 'text',
+                    text: `Current Conversation Transcript:\n${transcript}\n\nUser Request: ${userPrompt.trim()}`
+                });
+            } else {
+                userContent.push({ type: 'text', text: `User Request: ${userPrompt.trim()}` });
+            }
 
             const messages = [
                 { role: 'system', content: systemPrompt },
                 {
                     role: 'user',
-                    content: [
-                        { type: 'text', text: `User Request: ${userPrompt.trim()}` },
-                    ],
+                    content: userContent,
                 },
             ];
 
@@ -272,7 +305,7 @@ class AskService {
                     image_url: { url: `data:image/jpeg;base64,${screenshotBase64}` },
                 });
             }
-            
+
             const streamingLLM = createStreamingLLM(modelInfo.provider, {
                 apiKey: modelInfo.apiKey,
                 model: modelInfo.model,
@@ -305,7 +338,7 @@ class AskService {
                 // 멀티모달 요청이 실패했고 스크린샷이 포함되어 있다면 텍스트만으로 재시도
                 if (screenshotBase64 && this._isMultimodalError(multimodalError)) {
                     console.log(`[AskService] Multimodal request failed, retrying with text-only: ${multimodalError.message}`);
-                    
+
                     // 텍스트만으로 메시지 재구성
                     const textOnlyMessages = [
                         { role: 'system', content: systemPrompt },
@@ -327,7 +360,7 @@ class AskService {
                     const fallbackReader = fallbackResponse.body.getReader();
                     signal.addEventListener('abort', () => {
                         console.log(`[AskService] Aborting fallback stream reader. Reason: ${signal.reason}`);
-                        fallbackReader.cancel(signal.reason).catch(() => {});
+                        fallbackReader.cancel(signal.reason).catch(() => { });
                     });
 
                     await this._processStream(fallbackReader, askWin, sessionId, signal);
@@ -386,7 +419,7 @@ class AskService {
                     if (line.startsWith('data: ')) {
                         const data = line.substring(6);
                         if (data === '[DONE]') {
-                            return; 
+                            return;
                         }
                         try {
                             const json = JSON.parse(data);
@@ -415,10 +448,10 @@ class AskService {
             this.state.currentResponse = fullResponse;
             this._broadcastState();
             if (fullResponse) {
-                 try {
+                try {
                     await askRepository.addAiMessage({ sessionId, role: 'assistant', content: fullResponse });
                     console.log(`[AskService] DB: Saved partial or full assistant response to session ${sessionId} after stream ended.`);
-                } catch(dbError) {
+                } catch (dbError) {
                     console.error("[AskService] DB: Failed to save assistant response after stream ended:", dbError);
                 }
             }

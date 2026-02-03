@@ -779,9 +779,9 @@ export class AskView extends LitElement {
                 if (!this.showTextInput) {
                     this.showTextInput = true;
                     this.updateComplete.then(() => this.focusTextInput());
-                  } else {
+                } else {
                     this.focusTextInput();
-                  }
+                }
             });
 
             window.api.askView.onScrollResponseUp(() => this.handleScroll('up'));
@@ -789,20 +789,20 @@ export class AskView extends LitElement {
             window.api.askView.onAskStateUpdate((event, newState) => {
                 this.currentResponse = newState.currentResponse;
                 this.currentQuestion = newState.currentQuestion;
-                this.isLoading       = newState.isLoading;
-                this.isStreaming     = newState.isStreaming;
-              
+                this.isLoading = newState.isLoading;
+                this.isStreaming = newState.isStreaming;
+
                 const wasHidden = !this.showTextInput;
                 this.showTextInput = newState.showTextInput;
-              
+
                 if (newState.showTextInput) {
-                  if (wasHidden) {
-                    this.updateComplete.then(() => this.focusTextInput());
-                  } else {
-                    this.focusTextInput();
-                  }
+                    if (wasHidden) {
+                        this.updateComplete.then(() => this.focusTextInput());
+                    } else {
+                        this.focusTextInput();
+                    }
                 }
-              });
+            });
             console.log('AskView: IPC 이벤트 리스너 등록 완료');
         }
     }
@@ -993,7 +993,7 @@ export class AskView extends LitElement {
     renderContent() {
         const responseContainer = this.shadowRoot.getElementById('responseContainer');
         if (!responseContainer) return;
-    
+
         // Check loading state
         if (this.isLoading) {
             responseContainer.innerHTML = `
@@ -1005,14 +1005,14 @@ export class AskView extends LitElement {
             this.resetStreamingParser();
             return;
         }
-        
+
         // If there is no response, show empty state
         if (!this.currentResponse) {
             responseContainer.innerHTML = `<div class="empty-state">...</div>`;
             this.resetStreamingParser();
             return;
         }
-        
+
         // Set streaming markdown parser
         this.renderStreamingMarkdown(responseContainer);
 
@@ -1032,7 +1032,7 @@ export class AskView extends LitElement {
             if (!this.smdParser || this.smdContainer !== responseContainer) {
                 this.smdContainer = responseContainer;
                 this.smdContainer.innerHTML = '';
-                
+
                 // smd.js의 default_renderer 사용
                 const renderer = default_renderer(this.smdContainer);
                 this.smdParser = parser(renderer);
@@ -1042,7 +1042,7 @@ export class AskView extends LitElement {
             // 새로운 텍스트만 처리 (스트리밍 최적화)
             const currentText = this.currentResponse;
             const newText = currentText.slice(this.lastProcessedLength);
-            
+
             if (newText.length > 0) {
                 // 새로운 텍스트 청크를 파서에 전달
                 parser_write(this.smdParser, newText);
@@ -1066,7 +1066,7 @@ export class AskView extends LitElement {
 
             // 스크롤을 맨 아래로
             responseContainer.scrollTop = responseContainer.scrollHeight;
-            
+
         } catch (error) {
             console.error('Error rendering streaming markdown:', error);
             // 에러 발생 시 기본 텍스트 렌더링으로 폴백
@@ -1076,7 +1076,7 @@ export class AskView extends LitElement {
 
     renderFallbackContent(responseContainer) {
         const textToRender = this.currentResponse || '';
-        
+
         if (this.isLibrariesLoaded && this.marked && this.DOMPurify) {
             try {
                 // 마크다운 파싱
@@ -1283,7 +1283,7 @@ export class AskView extends LitElement {
         }
     }
 
-    handleTextKeydown(e) {
+    async handleTextKeydown(e) {
         // Fix for IME composition issue: Ignore Enter key presses while composing.
         if (e.isComposing) {
             return;
@@ -1292,7 +1292,36 @@ export class AskView extends LitElement {
         const isPlainEnter = e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey;
         const isModifierEnter = e.key === 'Enter' && (e.metaKey || e.ctrlKey);
 
-        if (isPlainEnter || isModifierEnter) {
+        if (isModifierEnter) {
+            e.preventDefault();
+            console.log('AskView: Command/Ctrl+Enter detected, fetching transcript...');
+
+            try {
+                if (window.api && window.api.askView && window.api.askView.getTranscript) {
+                    const transcript = await window.api.askView.getTranscript();
+                    if (transcript) {
+                        const textInput = this.shadowRoot?.getElementById('textInput');
+                        if (textInput) {
+                            const currentVal = textInput.value;
+                            // If input is not empty and doesn't end with newline, add one
+                            const separator = currentVal && !currentVal.endsWith('\n') ? '\n\n' : '';
+                            textInput.value = currentVal + separator + transcript;
+                            // Trigger input event to update any bindings if necessary
+                            textInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            // Scroll to bottom of input if needed
+                            textInput.scrollTop = textInput.scrollHeight;
+                        }
+                    } else {
+                        console.log('AskView: No transcript available to insert.');
+                    }
+                }
+            } catch (err) {
+                console.error('AskView: Failed to fetch/insert transcript:', err);
+            }
+            return;
+        }
+
+        if (isPlainEnter) {
             e.preventDefault();
             this.handleSendText();
         }
@@ -1300,16 +1329,16 @@ export class AskView extends LitElement {
 
     updated(changedProperties) {
         super.updated(changedProperties);
-    
+
         // ✨ isLoading 또는 currentResponse가 변경될 때마다 뷰를 다시 그립니다.
         if (changedProperties.has('isLoading') || changedProperties.has('currentResponse')) {
             this.renderContent();
         }
-    
+
         if (changedProperties.has('showTextInput') || changedProperties.has('isLoading') || changedProperties.has('currentResponse')) {
             this.adjustWindowHeightThrottled();
         }
-    
+
         if (changedProperties.has('showTextInput') && this.showTextInput) {
             this.focusTextInput();
         }

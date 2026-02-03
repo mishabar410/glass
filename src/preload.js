@@ -9,21 +9,21 @@ contextBridge.exposeInMainWorld('api', {
     isWindows: process.platform === 'win32',
     platform: process.platform
   },
-  
+
   // Common utilities used across multiple components
   common: {
     // User & Auth
     getCurrentUser: () => ipcRenderer.invoke('get-current-user'),
     startFirebaseAuth: () => ipcRenderer.invoke('start-firebase-auth'),
     firebaseLogout: () => ipcRenderer.invoke('firebase-logout'),
-    
+
     // App Control
-      quitApplication: () => ipcRenderer.invoke('quit-application'),
-      openExternal: (url) => ipcRenderer.invoke('open-external', url),
+    quitApplication: () => ipcRenderer.invoke('quit-application'),
+    openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
     // User state listener (used by multiple components)
-      onUserStateChanged: (callback) => ipcRenderer.on('user-state-changed', callback),
-      removeOnUserStateChanged: (callback) => ipcRenderer.removeListener('user-state-changed', callback),
+    onUserStateChanged: (callback) => ipcRenderer.on('user-state-changed', callback),
+    removeOnUserStateChanged: (callback) => ipcRenderer.removeListener('user-state-changed', callback),
   },
 
   // UI Component specific namespaces
@@ -38,7 +38,7 @@ contextBridge.exposeInMainWorld('api', {
     stopLocalAIService: (service) => ipcRenderer.invoke('localai:stop-service', service),
     installLocalAIModel: (service, modelId, options) => ipcRenderer.invoke('localai:install-model', { service, modelId, options }),
     getInstalledModels: (service) => ipcRenderer.invoke('localai:get-installed-models', service),
-    
+
     // Legacy support (호환성 위해 유지)
     getOllamaStatus: () => ipcRenderer.invoke('localai:get-status', 'ollama'),
     getModelSuggestions: () => ipcRenderer.invoke('ollama:get-model-suggestions'),
@@ -50,11 +50,11 @@ contextBridge.exposeInMainWorld('api', {
     validateKey: (data) => ipcRenderer.invoke('model:validate-key', data),
     setSelectedModel: (data) => ipcRenderer.invoke('model:set-selected-model', data),
     areProvidersConfigured: () => ipcRenderer.invoke('model:are-providers-configured'),
-    
+
     // Window Management
     getHeaderPosition: () => ipcRenderer.invoke('get-header-position'),
     moveHeaderTo: (x, y) => ipcRenderer.invoke('move-header-to', x, y),
-    
+
     // Listeners
     // LocalAI 통합 이벤트 리스너
     onLocalAIProgress: (callback) => ipcRenderer.on('localai:install-progress', callback),
@@ -65,7 +65,7 @@ contextBridge.exposeInMainWorld('api', {
     removeOnLocalAIError: (callback) => ipcRenderer.removeListener('localai:error-notification', callback),
     onLocalAIModelReady: (callback) => ipcRenderer.on('localai:model-ready', callback),
     removeOnLocalAIModelReady: (callback) => ipcRenderer.removeListener('localai:model-ready', callback),
-    
+
 
     // Remove all listeners (for cleanup)
     removeAllListeners: () => {
@@ -83,14 +83,14 @@ contextBridge.exposeInMainWorld('api', {
     // State Management
     sendHeaderStateChanged: (state) => ipcRenderer.send('header-state-changed', state),
     reInitializeModelState: () => ipcRenderer.invoke('model:re-initialize-state'),
-    
+
     // Window Management
     resizeHeaderWindow: (dimensions) => ipcRenderer.invoke('resize-header-window', dimensions),
-    
+
     // Permissions
     checkSystemPermissions: () => ipcRenderer.invoke('check-system-permissions'),
     checkPermissionsCompleted: () => ipcRenderer.invoke('check-permissions-completed'),
-    
+
     // Listeners
     onUserStateChanged: (callback) => ipcRenderer.on('user-state-changed', callback),
     removeOnUserStateChanged: (callback) => ipcRenderer.removeListener('user-state-changed', callback),
@@ -111,13 +111,13 @@ contextBridge.exposeInMainWorld('api', {
     cancelHideSettingsWindow: () => ipcRenderer.send('cancel-hide-settings-window'),
     showSettingsWindow: () => ipcRenderer.send('show-settings-window'),
     hideSettingsWindow: () => ipcRenderer.send('hide-settings-window'),
-    
+
     // Generic invoke (for dynamic channel names)
     // invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
     sendListenButtonClick: (listenButtonText) => ipcRenderer.invoke('listen:changeSession', listenButtonText),
     sendAskButtonClick: () => ipcRenderer.invoke('ask:toggleAskButton'),
     sendToggleAllWindowsVisibility: () => ipcRenderer.invoke('shortcut:toggleAllWindowsVisibility'),
-    
+
     // Listeners
     onListenChangeSessionResult: (callback) => ipcRenderer.on('listen:changeSessionResult', callback),
     removeOnListenChangeSessionResult: (callback) => ipcRenderer.removeListener('listen:changeSessionResult', callback),
@@ -149,9 +149,10 @@ contextBridge.exposeInMainWorld('api', {
     // Window Management
     closeAskWindow: () => ipcRenderer.invoke('ask:closeAskWindow'),
     adjustWindowHeight: (winName, height) => ipcRenderer.invoke('adjust-window-height', { winName, height }),
-    
+
     // Message Handling
     sendMessage: (text) => ipcRenderer.invoke('ask:sendQuestionFromAsk', text),
+    getTranscript: () => ipcRenderer.invoke('ask:getTranscript'),
 
     // Listeners
     onAskStateUpdate: (callback) => ipcRenderer.on('ask:stateUpdate', callback),
@@ -163,7 +164,7 @@ contextBridge.exposeInMainWorld('api', {
     // Listeners
     onShowTextInput: (callback) => ipcRenderer.on('ask:showTextInput', callback),
     removeOnShowTextInput: (callback) => ipcRenderer.removeListener('ask:showTextInput', callback),
-    
+
     onScrollResponseUp: (callback) => ipcRenderer.on('aks:scrollResponseUp', callback),
     removeOnScrollResponseUp: (callback) => ipcRenderer.removeListener('aks:scrollResponseUp', callback),
     onScrollResponseDown: (callback) => ipcRenderer.on('aks:scrollResponseDown', callback),
@@ -174,7 +175,7 @@ contextBridge.exposeInMainWorld('api', {
   listenView: {
     // Window Management
     adjustWindowHeight: (winName, height) => ipcRenderer.invoke('adjust-window-height', { winName, height }),
-    
+
     // Listeners
     onSessionStateChanged: (callback) => ipcRenderer.on('session-state-changed', callback),
     removeOnSessionStateChanged: (callback) => ipcRenderer.removeListener('session-state-changed', callback)
@@ -191,7 +192,7 @@ contextBridge.exposeInMainWorld('api', {
   summaryView: {
     // Message Handling
     sendQuestionFromSummary: (text) => ipcRenderer.invoke('ask:sendQuestionFromSummary', text),
-    
+
     // Listeners
     onSummaryUpdate: (callback) => ipcRenderer.on('summary-update', callback),
     removeOnSummaryUpdate: (callback) => ipcRenderer.removeListener('summary-update', callback),
@@ -216,16 +217,16 @@ contextBridge.exposeInMainWorld('api', {
     saveApiKey: (key) => ipcRenderer.invoke('model:save-api-key', key),
     removeApiKey: (provider) => ipcRenderer.invoke('model:remove-api-key', provider),
     setSelectedModel: (data) => ipcRenderer.invoke('model:set-selected-model', data),
-    
+
     // Ollama Management
     getOllamaStatus: () => ipcRenderer.invoke('ollama:get-status'),
     ensureOllamaReady: () => ipcRenderer.invoke('ollama:ensure-ready'),
     shutdownOllama: (graceful) => ipcRenderer.invoke('ollama:shutdown', graceful),
-    
+
     // Whisper Management
     getWhisperInstalledModels: () => ipcRenderer.invoke('whisper:get-installed-models'),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download-model', modelId),
-    
+
     // Settings Management
     getPresets: () => ipcRenderer.invoke('settings:getPresets'),
     getAutoUpdate: () => ipcRenderer.invoke('settings:get-auto-update'),
@@ -234,18 +235,18 @@ contextBridge.exposeInMainWorld('api', {
     toggleContentProtection: () => ipcRenderer.invoke('toggle-content-protection'),
     getCurrentShortcuts: () => ipcRenderer.invoke('settings:getCurrentShortcuts'),
     openShortcutSettingsWindow: () => ipcRenderer.invoke('shortcut:openShortcutSettingsWindow'),
-    
+
     // Window Management
     moveWindowStep: (direction) => ipcRenderer.invoke('move-window-step', direction),
     cancelHideSettingsWindow: () => ipcRenderer.send('cancel-hide-settings-window'),
     hideSettingsWindow: () => ipcRenderer.send('hide-settings-window'),
-    
+
     // App Control
     quitApplication: () => ipcRenderer.invoke('quit-application'),
-    
+
     // Progress Tracking
     pullOllamaModel: (modelName) => ipcRenderer.invoke('ollama:pull-model', modelName),
-    
+
     // Listeners
     onUserStateChanged: (callback) => ipcRenderer.on('user-state-changed', callback),
     removeOnUserStateChanged: (callback) => ipcRenderer.removeListener('user-state-changed', callback),
@@ -268,7 +269,7 @@ contextBridge.exposeInMainWorld('api', {
     saveShortcuts: (shortcuts) => ipcRenderer.invoke('shortcut:saveShortcuts', shortcuts),
     getDefaultShortcuts: () => ipcRenderer.invoke('shortcut:getDefaultShortcuts'),
     closeShortcutSettingsWindow: () => ipcRenderer.invoke('shortcut:closeShortcutSettingsWindow'),
-    
+
     // Listeners
     onLoadShortcuts: (callback) => ipcRenderer.on('shortcut:loadShortcuts', callback),
     removeOnLoadShortcuts: (callback) => ipcRenderer.removeListener('shortcut:loadShortcuts', callback)
@@ -278,7 +279,7 @@ contextBridge.exposeInMainWorld('api', {
   content: {
     // Listeners
     onSettingsWindowHideAnimation: (callback) => ipcRenderer.on('settings-window-hide-animation', callback),
-    removeOnSettingsWindowHideAnimation: (callback) => ipcRenderer.removeListener('settings-window-hide-animation', callback),    
+    removeOnSettingsWindowHideAnimation: (callback) => ipcRenderer.removeListener('settings-window-hide-animation', callback),
   },
 
   // src/ui/listen/audioCore/listenCapture.js
@@ -288,10 +289,10 @@ contextBridge.exposeInMainWorld('api', {
     sendSystemAudioContent: (data) => ipcRenderer.invoke('listen:sendSystemAudio', data),
     startMacosSystemAudio: () => ipcRenderer.invoke('listen:startMacosSystemAudio'),
     stopMacosSystemAudio: () => ipcRenderer.invoke('listen:stopMacosSystemAudio'),
-    
+
     // Session Management
     isSessionActive: () => ipcRenderer.invoke('listen:isSessionActive'),
-    
+
     // Listeners
     onSystemAudioData: (callback) => ipcRenderer.on('system-audio-data', callback),
     removeOnSystemAudioData: (callback) => ipcRenderer.removeListener('system-audio-data', callback)
