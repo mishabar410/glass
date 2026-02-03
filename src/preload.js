@@ -151,7 +151,7 @@ contextBridge.exposeInMainWorld('api', {
     adjustWindowHeight: (winName, height) => ipcRenderer.invoke('adjust-window-height', { winName, height }),
 
     // Message Handling
-    sendMessage: (text) => ipcRenderer.invoke('ask:sendQuestionFromAsk', text),
+    sendMessage: (text, sendScreenshot = true) => ipcRenderer.invoke('ask:sendQuestionFromAsk', text, sendScreenshot),
     getTranscript: () => ipcRenderer.invoke('ask:getTranscript'),
 
     // Listeners
@@ -226,6 +226,10 @@ contextBridge.exposeInMainWorld('api', {
     // Whisper Management
     getWhisperInstalledModels: () => ipcRenderer.invoke('whisper:get-installed-models'),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download-model', modelId),
+
+    // OpenAI STT Settings
+    getOpenaiSttSettings: () => ipcRenderer.invoke('settings:get-openai-stt-settings'),
+    setOpenaiSttSettings: (settings) => ipcRenderer.invoke('settings:set-openai-stt-settings', settings),
 
     // Settings Management
     getPresets: () => ipcRenderer.invoke('settings:getPresets'),

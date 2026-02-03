@@ -664,6 +664,31 @@ export class AskView extends LitElement {
         .submit-btn:hover, .clear-btn:hover {
             background: rgba(255,255,255,0.1);
         }
+        .screenshot-toggle {
+            display: flex;
+            align-items: center;
+            background: transparent;
+            color: rgba(255,255,255,0.5);
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: 'Helvetica Neue', sans-serif;
+            cursor: pointer;
+            transition: all 0.15s;
+            height: 28px;
+            padding: 0 8px;
+            gap: 4px;
+        }
+        .screenshot-toggle:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .screenshot-toggle.active {
+            color: rgba(255,255,255,0.9);
+        }
+        .screenshot-toggle svg {
+            width: 14px;
+            height: 14px;
+        }
         .btn-label {
             margin-right: 8px;
             display: flex;
@@ -721,6 +746,7 @@ export class AskView extends LitElement {
         this.headerText = 'AI Response';
         this.headerAnimating = false;
         this.isStreaming = false;
+        this.sendScreenshot = true; // Toggle for sending screenshot
 
         this.marked = null;
         this.hljs = null;
@@ -1277,7 +1303,7 @@ export class AskView extends LitElement {
         textInput.value = '';
 
         if (window.api) {
-            window.api.askView.sendMessage(text).catch(error => {
+            window.api.askView.sendMessage(text, this.sendScreenshot).catch(error => {
                 console.error('Error sending text:', error);
             });
         }
@@ -1418,6 +1444,18 @@ export class AskView extends LitElement {
                         @keydown=${this.handleTextKeydown}
                         @focus=${this.handleInputFocus}
                     />
+                    <button
+                        class="screenshot-toggle ${this.sendScreenshot ? 'active' : ''}"
+                        @click=${() => { this.sendScreenshot = !this.sendScreenshot; this.requestUpdate(); }}
+                        title="${this.sendScreenshot ? 'Screenshot attached' : 'No screenshot'}"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span>${this.sendScreenshot ? '📸' : '🚫'}</span>
+                    </button>
                     <button
                         class="submit-btn"
                         @click=${this.handleSendText}

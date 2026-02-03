@@ -2,6 +2,7 @@ const OpenAI = require('openai');
 const WebSocket = require('ws');
 const { Portkey } = require('portkey-ai');
 const { Readable } = require('stream');
+const settingsService = require('../../../settings/settingsService');
 
 
 class OpenAIProvider {
@@ -65,12 +66,16 @@ async function createSTT({ apiKey, language = 'en', callbacks = {}, usePortkey =
     ws.onopen = () => {
       console.log("WebSocket session opened.");
 
+      // Get STT settings from settingsService
+      const sttSettings = settingsService.getOpenaiSttSettings();
+      console.log('[OpenAI STT] Loaded settings:', sttSettings);
+
       // Strip -glass suffix from model name for API call
       let actualModel = config.model || 'gpt-4o-transcribe';
       if (actualModel.endsWith('-glass')) {
         actualModel = actualModel.replace('-glass', '');
       }
-      console.log(`[OpenAI STT] Using model: ${actualModel}, language: ru`);
+      console.log(`[OpenAI STT] Using model: ${actualModel}, language: ${sttSettings.language}`);
 
       const sessionConfig = {
         type: 'transcription_session.update',
@@ -78,14 +83,14 @@ async function createSTT({ apiKey, language = 'en', callbacks = {}, usePortkey =
           input_audio_format: 'pcm16',
           input_audio_transcription: {
             model: actualModel,
-            prompt: config.prompt || 'Транскрибируй на русском языке. Это разговор на русском языке. Записывай всё кириллицей.',
-            language: 'ru'
+            prompt: sttSettings.prompt,
+            language: sttSettings.language === 'auto' ? undefined : sttSettings.language
           },
           turn_detection: {
             type: 'server_vad',
-            threshold: 0.4,
-            prefix_padding_ms: 400,
-            silence_duration_ms: 300,
+            threshold: sttSettings.vadThreshold,
+            prefix_padding_ms: sttSettings.vadPrefixPaddingMs,
+            silence_duration_ms: sttSettings.vadSilenceDurationMs,
           },
           input_audio_noise_reduction: {
             type: 'near_field'

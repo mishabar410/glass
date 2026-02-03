@@ -28,6 +28,10 @@ module.exports = {
     ipcMain.handle('settings:ensure-ollama-ready', async () => await settingsService.ensureOllamaReady());
     ipcMain.handle('settings:shutdown-ollama', async () => await settingsService.shutdownOllama());
 
+    // OpenAI STT Settings
+    ipcMain.handle('settings:get-openai-stt-settings', () => settingsService.getOpenaiSttSettings());
+    ipcMain.handle('settings:set-openai-stt-settings', async (event, settings) => settingsService.setOpenaiSttSettings(settings));
+
     // Shortcuts
     ipcMain.handle('settings:getCurrentShortcuts', async () => await shortcutsService.loadKeybinds());
     ipcMain.handle('shortcut:getDefaultShortcuts', async () => await shortcutsService.handleRestoreDefaults());
@@ -79,7 +83,7 @@ module.exports = {
     ipcMain.handle('ollama:shutdown', async (event, force = false) => await ollamaService.handleShutdown(force));
 
     // Ask
-    ipcMain.handle('ask:sendQuestionFromAsk', async (event, userPrompt) => await askService.sendMessage(userPrompt));
+    ipcMain.handle('ask:sendQuestionFromAsk', async (event, userPrompt, sendScreenshot = true) => await askService.sendMessage(userPrompt, sendScreenshot));
     ipcMain.handle('ask:sendQuestionFromSummary', async (event, userPrompt) => await askService.sendMessage(userPrompt));
     ipcMain.handle('ask:toggleAskButton', async () => await askService.toggleAskButton());
     ipcMain.handle('ask:closeAskWindow', async () => await askService.closeAskWindow());
