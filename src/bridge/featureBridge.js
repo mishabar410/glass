@@ -32,6 +32,10 @@ module.exports = {
     ipcMain.handle('settings:get-openai-stt-settings', () => settingsService.getOpenaiSttSettings());
     ipcMain.handle('settings:set-openai-stt-settings', async (event, settings) => settingsService.setOpenaiSttSettings(settings));
 
+    // Context Settings
+    ipcMain.handle('settings:get-context-settings', () => settingsService.getContextSettings());
+    ipcMain.handle('settings:set-context-settings', async (event, settings) => settingsService.setContextSettings(settings));
+
     // Shortcuts
     ipcMain.handle('settings:getCurrentShortcuts', async () => await shortcutsService.loadKeybinds());
     ipcMain.handle('shortcut:getDefaultShortcuts', async () => await shortcutsService.handleRestoreDefaults());

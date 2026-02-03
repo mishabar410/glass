@@ -231,6 +231,10 @@ contextBridge.exposeInMainWorld('api', {
     getOpenaiSttSettings: () => ipcRenderer.invoke('settings:get-openai-stt-settings'),
     setOpenaiSttSettings: (settings) => ipcRenderer.invoke('settings:set-openai-stt-settings', settings),
 
+    // Context Settings
+    getContextSettings: () => ipcRenderer.invoke('settings:get-context-settings'),
+    setContextSettings: (settings) => ipcRenderer.invoke('settings:set-context-settings', settings),
+
     // Settings Management
     getPresets: () => ipcRenderer.invoke('settings:getPresets'),
     getAutoUpdate: () => ipcRenderer.invoke('settings:get-auto-update'),
