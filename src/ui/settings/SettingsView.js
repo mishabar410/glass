@@ -507,6 +507,8 @@ export class SettingsView extends LitElement {
         whisperModels: { type: Array, state: true },
         // OpenAI STT settings
         openaiSttSettings: { type: Object, state: true },
+        // Context settings
+        contextSettings: { type: Object, state: true },
     };
     //////// after_modelStateService ////////
 
@@ -543,6 +545,11 @@ export class SettingsView extends LitElement {
             vadThreshold: 0.4,
             vadPrefixPaddingMs: 400,
             vadSilenceDurationMs: 300
+        };
+        // Context settings
+        this.contextSettings = {
+            transcriptMaxWords: 500,
+            chatHistoryMaxMessages: 10
         };
         this.handleUsePicklesKey = this.handleUsePicklesKey.bind(this)
         this.autoUpdateEnabled = true;
@@ -618,6 +625,16 @@ export class SettingsView extends LitElement {
                 }
             } catch (error) {
                 console.error('Error loading OpenAI STT settings:', error);
+            }
+
+            // Load Context settings
+            try {
+                const contextSettings = await window.api.settingsView.getContextSettings();
+                if (contextSettings) {
+                    this.contextSettings = contextSettings;
+                }
+            } catch (error) {
+                console.error('Error loading context settings:', error);
             }
 
             // Trigger UI update
@@ -1189,6 +1206,27 @@ export class SettingsView extends LitElement {
         }
     }
 
+    async handleContextSettingChange(key, value) {
+        console.log(`[SettingsView] Context setting changed: ${key} = ${value}`);
+
+        if (!window.api) return;
+
+        try {
+            const newSettings = { ...this.contextSettings, [key]: value };
+            const result = await window.api.settingsView.setContextSettings(newSettings);
+
+            if (result.success) {
+                this.contextSettings = result.settings;
+                this.requestUpdate();
+                console.log('[SettingsView] Context settings saved:', result.settings);
+            } else {
+                console.error('[SettingsView] Failed to save context settings:', result.error);
+            }
+        } catch (error) {
+            console.error('[SettingsView] Error saving context settings:', error);
+        }
+    }
+
     async handleOllamaShutdown() {
         console.log('[SettingsView] Shutting down Ollama service...');
 
@@ -1483,6 +1521,38 @@ export class SettingsView extends LitElement {
 
                 ${apiKeyManagementHTML}
                 ${modelSelectionHTML}
+
+                <div class="api-key-section" style="margin-top: 12px;">
+                    <h3 style="font-size: 12px; margin-bottom: 8px; color: rgba(255,255,255,0.8);">Context Window Settings</h3>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 11px; color: rgba(255,255,255,0.6); display: block; margin-bottom: 4px;">
+                            Max Transcript Words: ${this.contextSettings.transcriptMaxWords}
+                        </label>
+                        <input type="range" min="50" max="2000" step="50"
+                            style="width: 100%;"
+                            .value=${this.contextSettings.transcriptMaxWords}
+                            @change=${(e) => this.handleContextSettingChange('transcriptMaxWords', parseInt(e.target.value))}>
+                        <div style="display: flex; justify-content: space-between; font-size: 9px; color: rgba(255,255,255,0.4);">
+                            <span>50</span>
+                            <span>2000</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label style="font-size: 11px; color: rgba(255,255,255,0.6); display: block; margin-bottom: 4px;">
+                            Max Chat History Messages: ${this.contextSettings.chatHistoryMaxMessages}
+                        </label>
+                        <input type="range" min="1" max="30" step="1"
+                            style="width: 100%;"
+                            .value=${this.contextSettings.chatHistoryMaxMessages}
+                            @change=${(e) => this.handleContextSettingChange('chatHistoryMaxMessages', parseInt(e.target.value))}>
+                        <div style="display: flex; justify-content: space-between; font-size: 9px; color: rgba(255,255,255,0.4);">
+                            <span>1</span>
+                            <span>30</span>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="buttons-section" style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 6px; margin-top: 6px;">
                     <button class="settings-button full-width" @click=${this.openShortcutEditor}>

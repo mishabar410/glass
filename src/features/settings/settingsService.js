@@ -18,6 +18,10 @@ const store = new Store({
             vadThreshold: 0.4,
             vadPrefixPaddingMs: 400,
             vadSilenceDurationMs: 300
+        },
+        contextSettings: {
+            transcriptMaxWords: 500,
+            chatHistoryMaxMessages: 10
         }
     }
 });
@@ -474,6 +478,44 @@ function setOpenaiSttSettings(settings) {
     }
 }
 
+// Context Settings
+function getContextSettings() {
+    try {
+        return store.get('contextSettings', {
+            transcriptMaxWords: 500,
+            chatHistoryMaxMessages: 10
+        });
+    } catch (error) {
+        console.error('[SettingsService] Error getting context settings:', error);
+        return {
+            transcriptMaxWords: 500,
+            chatHistoryMaxMessages: 10
+        };
+    }
+}
+
+function setContextSettings(settings) {
+    try {
+        const current = getContextSettings();
+        const updated = { ...current, ...settings };
+
+        // Validate settings
+        if (updated.transcriptMaxWords < 50 || updated.transcriptMaxWords > 5000) {
+            updated.transcriptMaxWords = 500;
+        }
+        if (updated.chatHistoryMaxMessages < 1 || updated.chatHistoryMaxMessages > 50) {
+            updated.chatHistoryMaxMessages = 10;
+        }
+
+        store.set('contextSettings', updated);
+        console.log('[SettingsService] Context settings saved:', updated);
+        return { success: true, settings: updated };
+    } catch (error) {
+        console.error('[SettingsService] Error setting context settings:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 function initialize() {
     // cleanup 
     windowNotificationManager.cleanup();
@@ -513,6 +555,9 @@ module.exports = {
     // OpenAI STT settings
     getOpenaiSttSettings,
     setOpenaiSttSettings,
+    // Context settings
+    getContextSettings,
+    setContextSettings,
     // Model settings facade
     getModelSettings,
     clearApiKey,

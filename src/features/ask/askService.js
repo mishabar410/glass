@@ -23,6 +23,7 @@ const util = require('util');
 const execFile = util.promisify(require('child_process').execFile);
 const { desktopCapturer } = require('electron');
 const modelStateService = require('../common/services/modelStateService');
+const settingsService = require('../settings/settingsService');
 
 // Try to load sharp, but don't fail if it's not available
 let sharp;
@@ -212,7 +213,7 @@ class AskService {
     }
 
     /**
-     * Get the current transcript from ListenService
+     * Get the current transcript from ListenService, limited to configured max words
      * @returns {string} The formatted transcript
      */
     getTranscript() {
@@ -221,8 +222,23 @@ class AskService {
             if (!history || history.length === 0) {
                 return '';
             }
-            // Join conversation turns with newlines
-            return history.join('\n');
+
+            // Get context settings
+            const contextSettings = settingsService.getContextSettings();
+            const maxWords = contextSettings.transcriptMaxWords || 500;
+
+            // Join and limit by words (take last N words)
+            const fullTranscript = history.join('\n');
+            const words = fullTranscript.split(/\s+/);
+
+            if (words.length <= maxWords) {
+                return fullTranscript;
+            }
+
+            // Take last maxWords
+            const limitedWords = words.slice(-maxWords);
+            console.log(`[AskService] Transcript limited: ${words.length} -> ${maxWords} words`);
+            return '...' + limitedWords.join(' ');
         } catch (error) {
             console.error('[AskService] Failed to get transcript:', error);
             return '';
