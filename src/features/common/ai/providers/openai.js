@@ -2,7 +2,6 @@ const OpenAI = require('openai');
 const WebSocket = require('ws');
 const { Portkey } = require('portkey-ai');
 const { Readable } = require('stream');
-const { getProviderForModel } = require('../factory.js');
 
 
 class OpenAIProvider {
@@ -66,20 +65,27 @@ async function createSTT({ apiKey, language = 'en', callbacks = {}, usePortkey =
     ws.onopen = () => {
       console.log("WebSocket session opened.");
 
+      // Strip -glass suffix from model name for API call
+      let actualModel = config.model || 'gpt-4o-transcribe';
+      if (actualModel.endsWith('-glass')) {
+        actualModel = actualModel.replace('-glass', '');
+      }
+      console.log(`[OpenAI STT] Using model: ${actualModel}, language: ru`);
+
       const sessionConfig = {
         type: 'transcription_session.update',
         session: {
           input_audio_format: 'pcm16',
           input_audio_transcription: {
-            model: 'gpt-4o-mini-transcribe',
-            prompt: config.prompt || '',
-            language: language || 'en'
+            model: actualModel,
+            prompt: config.prompt || 'Транскрибируй на русском языке. Это разговор на русском языке. Записывай всё кириллицей.',
+            language: 'ru'
           },
           turn_detection: {
             type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 200,
-            silence_duration_ms: 100,
+            threshold: 0.4,
+            prefix_padding_ms: 400,
+            silence_duration_ms: 300,
           },
           input_audio_noise_reduction: {
             type: 'near_field'
@@ -158,14 +164,14 @@ async function createSTT({ apiKey, language = 'en', callbacks = {}, usePortkey =
  * Creates an OpenAI LLM instance
  * @param {object} opts - Configuration options
  * @param {string} opts.apiKey - OpenAI API key
- * @param {string} [opts.model='gpt-5.1'] - Model name
+ * @param {string} [opts.model='gpt-5.2-2025-12-11'] - Model name
  * @param {number} [opts.temperature=0.7] - Temperature
  * @param {number} [opts.maxTokens=2048] - Max tokens
  * @param {boolean} [opts.usePortkey=false] - Whether to use Portkey
  * @param {string} [opts.portkeyVirtualKey] - Portkey virtual key
  * @returns {object} LLM instance
  */
-function createLLM({ apiKey, model = 'gpt-5.1-2025-11-13', temperature = 0.7, maxTokens = 2048, usePortkey = false, portkeyVirtualKey, ...config }) {
+function createLLM({ apiKey, model = 'gpt-5.2-2025-12-11', temperature = 0.7, maxTokens = 2048, usePortkey = false, portkeyVirtualKey, ...config }) {
   const client = new OpenAI({ apiKey });
 
   const callApi = async (messages) => {
@@ -253,14 +259,14 @@ function createLLM({ apiKey, model = 'gpt-5.1-2025-11-13', temperature = 0.7, ma
  * Creates an OpenAI streaming LLM instance
  * @param {object} opts - Configuration options
  * @param {string} opts.apiKey - OpenAI API key
- * @param {string} [opts.model='gpt-5.1'] - Model name
+ * @param {string} [opts.model='gpt-5.2-2025-12-11'] - Model name
  * @param {number} [opts.temperature=0.7] - Temperature
  * @param {number} [opts.maxTokens=2048] - Max tokens
  * @param {boolean} [opts.usePortkey=false] - Whether to use Portkey
  * @param {string} [opts.portkeyVirtualKey] - Portkey virtual key
  * @returns {object} Streaming LLM instance
  */
-function createStreamingLLM({ apiKey, model = 'gpt-5.1-2025-11-13', temperature = 0.7, maxTokens = 2048, usePortkey = false, portkeyVirtualKey, ...config }) {
+function createStreamingLLM({ apiKey, model = 'gpt-5.2-2025-12-11', temperature = 0.7, maxTokens = 2048, usePortkey = false, portkeyVirtualKey, ...config }) {
   return {
     streamChat: async (messages) => {
       const fetchUrl = usePortkey
@@ -285,7 +291,7 @@ function createStreamingLLM({ apiKey, model = 'gpt-5.1-2025-11-13', temperature 
           model: model,
           messages,
           temperature,
-          // max_tokens: maxTokens, // Unsupported by GPT-5.1
+          // max_tokens: maxTokens, // Unsupported by GPT-5.2
           stream: true,
         }),
       });

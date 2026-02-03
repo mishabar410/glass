@@ -19,10 +19,10 @@ module.exports = {
     // Settings Service
     ipcMain.handle('settings:getPresets', async () => await settingsService.getPresets());
     ipcMain.handle('settings:get-auto-update', async () => await settingsService.getAutoUpdateSetting());
-    ipcMain.handle('settings:set-auto-update', async (event, isEnabled) => await settingsService.setAutoUpdateSetting(isEnabled));  
+    ipcMain.handle('settings:set-auto-update', async (event, isEnabled) => await settingsService.setAutoUpdateSetting(isEnabled));
     ipcMain.handle('settings:get-model-settings', async () => await settingsService.getModelSettings());
     ipcMain.handle('settings:clear-api-key', async (e, { provider }) => await settingsService.clearApiKey(provider));
-    ipcMain.handle('settings:set-selected-model', async (e, { type, modelId }) => await settingsService.setSelectedModel(type, modelId));    
+    ipcMain.handle('settings:set-selected-model', async (e, { type, modelId }) => await settingsService.setSelectedModel(type, modelId));
 
     ipcMain.handle('settings:get-ollama-status', async () => await settingsService.getOllamaStatus());
     ipcMain.handle('settings:ensure-ollama-ready', async () => await settingsService.ensureOllamaReady());
@@ -43,9 +43,9 @@ module.exports = {
     ipcMain.handle('mark-keychain-completed', async () => await permissionService.markKeychainCompleted());
     ipcMain.handle('check-keychain-completed', async () => await permissionService.checkKeychainCompleted());
     ipcMain.handle('initialize-encryption-key', async () => {
-        const userId = authService.getCurrentUserId();
-        await encryptionService.initializeKey(userId);
-        return { success: true };
+      const userId = authService.getCurrentUserId();
+      await encryptionService.initializeKey(userId);
+      return { success: true };
     });
 
     // User/Auth
@@ -59,7 +59,7 @@ module.exports = {
     // Whisper
     ipcMain.handle('whisper:download-model', async (event, modelId) => await whisperService.handleDownloadModel(modelId));
     ipcMain.handle('whisper:get-installed-models', async () => await whisperService.handleGetInstalledModels());
-       
+
     // General
     ipcMain.handle('get-preset-templates', () => presetRepository.getPresetTemplates());
     ipcMain.handle('get-web-url', () => process.env.pickleglass_WEB_URL || 'http://localhost:3000');
@@ -82,16 +82,17 @@ module.exports = {
     ipcMain.handle('ask:sendQuestionFromAsk', async (event, userPrompt) => await askService.sendMessage(userPrompt));
     ipcMain.handle('ask:sendQuestionFromSummary', async (event, userPrompt) => await askService.sendMessage(userPrompt));
     ipcMain.handle('ask:toggleAskButton', async () => await askService.toggleAskButton());
-    ipcMain.handle('ask:closeAskWindow',  async () => await askService.closeAskWindow());
-    
+    ipcMain.handle('ask:closeAskWindow', async () => await askService.closeAskWindow());
+    ipcMain.handle('ask:getTranscript', async () => await askService.getTranscript());
+
     // Listen
     ipcMain.handle('listen:sendMicAudio', async (event, { data, mimeType }) => await listenService.handleSendMicAudioContent(data, mimeType));
     ipcMain.handle('listen:sendSystemAudio', async (event, { data, mimeType }) => {
-        const result = await listenService.sttService.sendSystemAudioContent(data, mimeType);
-        if(result.success) {
-            listenService.sendToRenderer('system-audio-data', { data });
-        }
-        return result;
+      const result = await listenService.sttService.sendSystemAudioContent(data, mimeType);
+      if (result.success) {
+        listenService.sendToRenderer('system-audio-data', { data });
+      }
+      return result;
     });
     ipcMain.handle('listen:startMacosSystemAudio', async () => await listenService.handleStartMacosAudio());
     ipcMain.handle('listen:stopMacosSystemAudio', async () => await listenService.handleStopMacosAudio());
@@ -218,12 +219,12 @@ module.exports = {
     ipcMain.handle('localai:repair-service', async (event, service) => {
       return await localAIManager.repairService(service);
     });
-    
+
     // 에러 처리 핸들러
     ipcMain.handle('localai:handle-error', async (event, { service, errorType, details }) => {
       return await localAIManager.handleError(service, errorType, details);
     });
-    
+
     // 전체 상태 조회
     ipcMain.handle('localai:get-all-states', async (event) => {
       return await localAIManager.getAllServiceStates();

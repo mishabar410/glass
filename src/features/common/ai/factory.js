@@ -22,12 +22,13 @@ const PROVIDERS = {
         name: 'OpenAI',
         handler: () => require("./providers/openai"),
         llmModels: [
-            { id: 'gpt-5.1-2025-11-13', name: 'GPT-5.1' },
-            { id: 'gpt-5.1-mini', name: 'GPT-5.1 Mini' },
+            { id: 'gpt-5.2-2025-12-11', name: 'GPT-5.2' },
+            { id: 'gpt-5-mini-2025-08-07', name: 'GPT-5 Mini' },
             { id: 'gpt-4.1', name: 'GPT-4.1' },
         ],
         sttModels: [
-            { id: 'gpt-4o-mini-transcribe', name: 'GPT-4o Mini Transcribe' }
+            { id: 'gpt-4o-mini-transcribe', name: 'GPT-4o Mini Transcribe' },
+            { id: 'gpt-4o-transcribe', name: 'GPT-4o Transcribe' }
         ],
     },
 
@@ -35,12 +36,13 @@ const PROVIDERS = {
         name: 'OpenAI (Glass)',
         handler: () => require("./providers/openai"),
         llmModels: [
-            { id: 'gpt-5.1-2025-11-13-glass', name: 'GPT-5.1 (glass)' },
-            { id: 'gpt-5.1-mini-glass', name: 'GPT-5.1 Mini (glass)' },
+            { id: 'gpt-5.2-2025-12-11-glass', name: 'GPT-5.2 (glass)' },
+            { id: 'gpt-5-mini-2025-08-07-glass', name: 'GPT-5 Mini (glass)' },
             { id: 'gpt-4.1-glass', name: 'GPT-4.1 (glass)' },
         ],
         sttModels: [
-            { id: 'gpt-4o-mini-transcribe-glass', name: 'GPT-4o Mini Transcribe (glass)' }
+            { id: 'gpt-4o-mini-transcribe-glass', name: 'GPT-4o Mini Transcribe (glass)' },
+            { id: 'gpt-4o-transcribe-glass', name: 'GPT-4o Transcribe (glass)' }
         ],
     },
     'gemini': {
